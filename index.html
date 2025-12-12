@@ -255,24 +255,23 @@ function PrintLayout({quote}) {
       <h1 className="text-xl font-bold text-center">{c.name}</h1>
       <div className="text-center mb-2">{c.address}</div>
 
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <div>
-          報價單號：{quote.no}<br/>
-          報價日期：{quote.date}<br/>
-          客戶名稱：{quote.customerName}<br/>
-          工程名稱：{quote.projectName}<br/>
-          主辦人：{quote.contactPerson}<br/>
-          聯絡電話：{quote.contactTel}<br/>
-          聯絡地址：{quote.contactAddr}
-        </div>
-        <div>
-          接單人員：{quote.sales}<br/>
-          報價階段：{quote.stage}<br/>
-          合約案號：{quote.contractNo}<br/>
-          客戶統編：{quote.taxId}<br/>
-          傳真號碼：{quote.fax}
-        </div>
-      </div>
+{/* ===== 報價單基本資料 ===== */}
+<div className="grid grid-cols-2 gap-6 text-sm mb-4">
+  <div className="space-y-1">
+    <div>報價單號：{quote.no}</div>
+    <div>報價日期：{quote.date}</div>
+    <div>客戶名稱：{quote.customerName}</div>
+    <div>工程名稱：{quote.projectName}</div>
+    <div>客戶聯絡人：{quote.contactPerson}</div>
+    <div>聯絡電話：{quote.contactTel}</div>
+    <div>聯絡地址：{quote.contactAddr}</div>
+  </div>
+
+  <div className="space-y-1">
+    <div>客戶統編：{quote.taxId}</div>
+    <div>傳真號碼：{quote.fax}</div>
+  </div>
+</div>
 
       <table className="w-full border-collapse border">
         <thead>
@@ -357,6 +356,83 @@ function App() {
       <div className="flex-grow p-4">
         {activeQuote && (
           <>
+            <div className="border bg-white p-4 mb-3">
+  <div className="grid grid-cols-2 gap-6 text-sm">
+
+    {/* 左側 */}
+    <div className="space-y-1">
+      <div>報價單號：<span className="font-medium">{activeQuote.no}</span></div>
+      <div>報價日期：<span className="font-medium">{activeQuote.date}</span></div>
+
+      <div>
+        客戶名稱：
+        <input
+          className="border ml-2 px-1 w-64"
+          value={activeQuote.customerName}
+          onChange={e=>setActiveQuote({...activeQuote,customerName:e.target.value})}
+        />
+      </div>
+
+      <div>
+        工程名稱：
+        <input
+          className="border ml-2 px-1 w-64"
+          value={activeQuote.projectName}
+          onChange={e=>setActiveQuote({...activeQuote,projectName:e.target.value})}
+        />
+      </div>
+
+      <div>
+        客戶聯絡人：
+        <input
+          className="border ml-2 px-1 w-48"
+          value={activeQuote.contactPerson}
+          onChange={e=>setActiveQuote({...activeQuote,contactPerson:e.target.value})}
+        />
+      </div>
+
+      <div>
+        聯絡電話：
+        <input
+          className="border ml-2 px-1 w-48"
+          value={activeQuote.contactTel}
+          onChange={e=>setActiveQuote({...activeQuote,contactTel:e.target.value})}
+        />
+      </div>
+
+      <div>
+        聯絡地址：
+        <input
+          className="border ml-2 px-1 w-80"
+          value={activeQuote.contactAddr}
+          onChange={e=>setActiveQuote({...activeQuote,contactAddr:e.target.value})}
+        />
+      </div>
+    </div>
+
+    {/* 右側 */}
+    <div className="space-y-1">
+      <div>
+        客戶統編：
+        <input
+          className="border ml-2 px-1 w-48"
+          value={activeQuote.taxId}
+          onChange={e=>setActiveQuote({...activeQuote,taxId:e.target.value})}
+        />
+      </div>
+
+      <div>
+        傳真號碼：
+        <input
+          className="border ml-2 px-1 w-48"
+          value={activeQuote.fax}
+          onChange={e=>setActiveQuote({...activeQuote,fax:e.target.value})}
+        />
+      </div>
+    </div>
+
+  </div>
+</div>
             <table className="w-full border mb-2">
               <tbody>
                 {activeQuote.items.map((it,idx)=>(
