@@ -375,16 +375,20 @@ function QuoteItem({ item, index, onChange, onDelete }) {
         </td>
       </tr>
 
-      {/* 用料子行（有用料才顯示） */}
       {hasMaterials && (
-        <tr>
-          <td className="border-t-0 border-l border-r"></td>
-          <td colSpan="8" className="border border-t-0 text-sm text-gray-600 px-3 py-2">
-            {index + 1}-1 用料明細：
-            {[item.material1, item.material2, item.material3].filter(Boolean).join("、")}
-          </td>
-        </tr>
-      )}
+  <tr>
+    {/* 項次欄位顯示 2-1 */}
+    <td className="border text-center align-top">
+      {index + 1}-1
+    </td>
+
+    {/* 用料內容 */}
+    <td colSpan="8" className="border text-sm text-gray-600 px-3 py-2">
+      用料明細：
+      {[item.material1, item.material2, item.material3].filter(Boolean).join("、")}
+    </td>
+  </tr>
+)}
 
       {/* 圖片子行（有圖才顯示） */}
       {hasImage && (
