@@ -1,0 +1,65 @@
+// --------------------------------------------------
+// 4. 應用程式根部 (App) - 確保數據流動
+// --------------------------------------------------
+function App() {
+    // 獲取 activeQuote
+    const { activeQuote } = React.useContext(AppContext);
+
+    // 計算總金額
+    const totalAmount = React.useMemo(() => activeQuote ? calcTotal(activeQuote.items) : 0, [activeQuote]);
+    const negotiatedAmount = React.useMemo(() => {
+        return activeQuote ? calcNegotiated(totalAmount, activeQuote.discountPercent, activeQuote.negotiatedPrice) : 0;
+    }, [activeQuote, totalAmount]);
+    
+    // 建立用於 PrintButton 的 Ref
+    const componentRef = React.useRef();
+
+    return (
+        <div className="min-h-screen bg-gray-50 flex">
+            {/* 左側邊欄 (省略不相關的組件) */}
+            <div className="w-64 bg-white p-4 shadow-lg flex-shrink-0">
+                <h1 className="text-xl font-extrabold mb-6 text-center text-blue-700">功能測試區</h1>
+                <ExportButton />
+            </div>
+            
+            {/* 右側內容區 */}
+            <div className="flex-grow p-8">
+                
+                {/* 列印按鈕 */}
+                <div className='flex justify-end mb-4'>
+                    <PrintButton 
+                        quote={activeQuote} 
+                        totalAmount={totalAmount} 
+                        negotiatedAmount={negotiatedAmount} 
+                        componentRef={componentRef} 
+                    />
+                </div>
+                
+                {/* 預覽區 (使用 ref 綁定，並傳遞數據) */}
+                <div 
+                    className="bg-white shadow-xl p-0 border border-gray-300 overflow-auto" 
+                    style={{ height: 'calc(100vh - 100px)' }}>
+                    <div ref={componentRef}>
+                        <PrintLayout 
+                            quote={activeQuote} 
+                            totalAmount={totalAmount} 
+                            negotiatedAmount={negotiatedAmount}
+                            isPreview={true} // 設置為預覽模式
+                        />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// --------------------------------------------------
+// 5. 啟動應用程式
+// --------------------------------------------------
+// 確保您已在 HTML 中引入 ReactDOM 和 React 庫
+// const root = ReactDOM.createRoot(document.getElementById("root"));
+// root.render(
+//   <AppProvider>
+//     <App />
+//   </AppProvider>
+// );
