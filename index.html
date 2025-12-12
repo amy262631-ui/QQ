@@ -542,12 +542,47 @@ function PrintLayout({ quote }) {
         </tbody>
       </table>
 
-      {/* 簽名 / 公司章 */}
-      <div className="flex justify-between mt-16">
-        <div className="border w-1/3 h-24 p-2">客戶簽名</div>
-        <div className="border w-1/3 h-24 flex items-center justify-center">
-          <img src={c.stamp} alt="公司章" className="max-h-20" />
+      {/* ===== 簽名 / 蓋章區（標題在上，左右各有內框） ===== */}
+<table className="w-full border-collapse mt-16 text-sm">
+  <tbody>
+    {/* 標題列（不在框內） */}
+    <tr>
+      <td className="w-1/2 font-medium pb-2">
+        公司報價章
+      </td>
+      <td className="w-1/2 font-medium pb-2">
+        客戶回簽欄
+      </td>
+    </tr>
+
+    {/* 內容列 */}
+    <tr>
+      {/* 左：公司報價章 */}
+      <td className="align-top">
+        <div className="border h-44 flex flex-col">
+          <div className="flex-grow flex items-center justify-center">
+            <img
+              src={c.stamp}
+              alt="公司印章"
+              className="max-h-24"
+            />
+          </div>
+          <div className="border-t h-10"></div>
         </div>
+      </td>
+
+      {/* 右：客戶回簽欄 */}
+      <td className="align-top">
+        <div className="border h-44 flex flex-col">
+          <div className="flex-grow"></div>
+          <div className="border-t px-2 py-1 text-right">
+            日期：＿＿＿＿＿＿＿＿＿＿＿＿
+          </div>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
       </div>
     </div>
   );
