@@ -15,15 +15,19 @@
   <!-- Babel -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- PDF / Excel -->
+  <!-- PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
   <style>
     @media print {
       body * { visibility: hidden; }
       #print-area, #print-area * { visibility: visible; }
-      #print-area { position: absolute; inset: 0; }
+      #print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 210mm;
+      }
     }
   </style>
 </head>
@@ -34,7 +38,7 @@
 <script type="text/babel">
 
 /***********************************************************
- * P1-0 — COMPANY_DATA
+ * P1 — 公司資料
  ***********************************************************/
 const COMPANY_DATA = {
   herhsin: {
@@ -64,84 +68,77 @@ const SPEC_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHQN_nMBB7l72PSD8omOO55UYRlIClUGEDgtzYzTKK-5fvRWIZowcdnMHvkkwJbdz7krhIiRc00sye/pub?output=csv";
 
 /***********************************************************
- * P1-2 — useSpecSheetData
+ * 報價單編號產生
+ ***********************************************************/
+const quoteSeqMap = {};
+function generateQuoteNo(companyKey) {
+  const p = COMPANY_DATA[companyKey].prefix;
+  const d = new Date();
+  const y = String(d.getFullYear()).slice(2);
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  const dateStr = `${y}${m}${day}`;
+  const k = companyKey + dateStr;
+  quoteSeqMap[k] = (quoteSeqMap[k] || 0) + 1;
+  return `${p}${dateStr}-${String(quoteSeqMap[k]).padStart(2,"0")}`;
+}
+
+/***********************************************************
+ * Google Sheet hook
  ***********************************************************/
 function useSpecSheetData() {
   const [data, setData] = React.useState([]);
-
   React.useEffect(() => {
     fetch(SPEC_SHEET_URL)
-      .then(r => r.text())
-      .then(csv => {
+      .then(r=>r.text())
+      .then(csv=>{
         const rows = csv.trim().split("\n");
-        const headers = rows[0].split(",");
-        const parsed = rows.slice(1).map(r => {
-          const cols = r.split(",");
+        const h = rows[0].split(",");
+        setData(rows.slice(1).map(r=>{
+          const c = r.split(",");
           const o = {};
-          headers.forEach((h, i) => o[h.trim()] = (cols[i] || "").trim());
+          h.forEach((x,i)=>o[x.trim()] = (c[i]||"").trim());
           return o;
-        });
-        setData(parsed);
+        }));
       });
   }, []);
-
   return data;
 }
 
 /***********************************************************
- * P2 — 計算函式（純 function）
- ***********************************************************/
-function calcTotal(items = []) {
-  return items.reduce((s, i) => s + (Number(i.price) || 0), 0);
-}
-
-function calcNegotiated(total, percent, amount) {
-  if (amount) return total - Number(amount);
-  if (percent) return total * (1 - percent / 100);
-  return total;
-}
-
-/***********************************************************
- * P3 — AppContext（activeQuote）
+ * AppContext
  ***********************************************************/
 const AppContext = React.createContext();
-
-function AppProvider({ children }) {
+function AppProvider({children}) {
   const [activeQuote, setActiveQuote] = React.useState(null);
-
   const newQuote = (companyKey) => {
-    const today = new Date();
-    const dateStr = today.toISOString().slice(0,10).replace(/-/g,"");
-    const q = {
+    setActiveQuote({
       id: Date.now(),
       companyKey,
-      no: `${COMPANY_DATA[companyKey].prefix}-${dateStr}-001`,
-      items: [],
-      discountPercent: "",
-      negotiatedPrice: ""
-    };
-    setActiveQuote(q);
+      no: generateQuoteNo(companyKey),
+      items: []
+    });
   };
-
   return (
-    <AppContext.Provider value={{ activeQuote, setActiveQuote, newQuote }}>
+    <AppContext.Provider value={{activeQuote,setActiveQuote,newQuote}}>
       {children}
     </AppContext.Provider>
   );
 }
 
 /***********************************************************
- * P4 — Autocomplete
+ * Autocomplete
  ***********************************************************/
-function SpecAutocomplete({ value, onSelect }) {
-  const specData = useSpecSheetData();
-  const [kw, setKw] = React.useState("");
-  const list = React.useMemo(() => {
-    if (!kw) return [];
-    return specData.filter(r =>
-      (r["品名"]||"").includes(kw) || (r["規格"]||"").includes(kw)
-    ).slice(0,8);
-  }, [kw, specData]);
+function SpecAutocomplete({item,onSelect}) {
+  const data = useSpecSheetData();
+  const [kw,setKw]=React.useState("");
+  const list = React.useMemo(()=>{
+    if(!kw) return [];
+    return data.filter(r=>
+      (r["品名"]||"").includes(kw) ||
+      (r["規格"]||"").includes(kw)
+    ).slice(0,10);
+  },[kw,data]);
 
   return (
     <div className="relative">
@@ -151,25 +148,25 @@ function SpecAutocomplete({ value, onSelect }) {
         onChange={e=>setKw(e.target.value)}
       />
       {list.length>0 && (
-        <div className="absolute bg-white border w-full z-10">
+        <div className="absolute z-20 bg-white border w-full">
           {list.map((r,i)=>(
             <div key={i}
               className="p-2 hover:bg-gray-100 cursor-pointer"
               onClick={()=>{
                 onSelect({
-                  ...value,
-                  name: r["品名"],
-                  spec: r["規格"],
-                  unit: r["單位"],
-                  price: Number(r["單價"]||0),
-                  m1: r["用料1"]||"",
-                  m2: r["用料2"]||"",
-                  m3: r["用料3"]||"",
+                  ...item,
+                  name:r["品名"],
+                  spec:r["規格"],
+                  unit:r["單位"],
+                  price:Number(r["單價"]||0),
+                  material1:r["用料1"]||"",
+                  material2:r["用料2"]||"",
+                  material3:r["用料3"]||"",
                 });
                 setKw("");
               }}>
               <div className="font-medium">{r["品名"]}</div>
-              <div className="text-xs">{r["規格"]}</div>
+              <div className="text-xs text-gray-600">{r["規格"]}</div>
             </div>
           ))}
         </div>
@@ -179,12 +176,12 @@ function SpecAutocomplete({ value, onSelect }) {
 }
 
 /***********************************************************
- * P5 — QuoteItem
+ * QuoteItem
  ***********************************************************/
-function QuoteItem({ item, onChange }) {
+function QuoteItem({item,onChange}) {
   return (
     <div className="border p-3 bg-white space-y-2">
-      <SpecAutocomplete value={item} onSelect={onChange} />
+      <SpecAutocomplete item={item} onSelect={onChange}/>
       <input className="border p-2 w-full" placeholder="品名"
         value={item.name||""}
         onChange={e=>onChange({...item,name:e.target.value})}/>
@@ -193,20 +190,22 @@ function QuoteItem({ item, onChange }) {
         onChange={e=>onChange({...item,spec:e.target.value})}/>
       <input className="border p-2 w-full" placeholder="單價"
         value={item.price||""}
-        onChange={e=>onChange({...item,price:e.target.value})}/>
+        onChange={e=>onChange({...item,price:Number(e.target.value)})}/>
     </div>
   );
 }
 
 /***********************************************************
- * P6 — PrintLayout（只顯示）
+ * PrintLayout（正式）
  ***********************************************************/
-function PrintLayout({ quote, total, final }) {
+function PrintLayout({quote}) {
   const c = COMPANY_DATA[quote.companyKey];
   return (
-    <div id="print-area" className="p-6 bg-white text-sm">
-      <h1 className="text-xl font-bold">{c.name}</h1>
-      <div>{c.address}</div>
+    <div id="print-area" className="p-8 bg-white text-sm"
+      style={{width:"210mm",minHeight:"297mm"}}>
+      <h1 className="text-xl font-bold text-center">{c.name}</h1>
+      <div className="text-center mb-4">{c.address}</div>
+      <div>報價單號：{quote.no}</div>
 
       <table className="w-full border mt-4">
         <thead>
@@ -223,7 +222,7 @@ function PrintLayout({ quote, total, final }) {
               <td className="border">{i.name}</td>
               <td className="border">{i.spec}</td>
               <td className="border">
-                {[i.m1,i.m2,i.m3].filter(Boolean).join("、")}
+                {[i.material1,i.material2,i.material3].filter(Boolean).join("、")}
               </td>
               <td className="border text-right">{i.price}</td>
             </tr>
@@ -231,69 +230,69 @@ function PrintLayout({ quote, total, final }) {
         </tbody>
       </table>
 
-      <div className="text-right mt-4">總價：{total}</div>
-      <div className="text-right font-bold">最終總價：{Math.round(final)}</div>
-
-      <div className="flex justify-between mt-12">
-        <div className="border-t w-1/3">客戶簽名</div>
-        <img src={c.stamp} className="h-20"/>
+      <div className="flex justify-between mt-16">
+        <div className="border w-1/3 h-24 flex items-end p-2">客戶簽名</div>
+        <div className="border w-1/3 h-24 flex items-center justify-center">
+          <img src={c.stamp} className="max-h-20"/>
+        </div>
       </div>
     </div>
   );
 }
 
 /***********************************************************
- * P7 — App
+ * App
  ***********************************************************/
 function App() {
-  const { activeQuote, setActiveQuote, newQuote } = React.useContext(AppContext);
-  const total = React.useMemo(()=>activeQuote?calcTotal(activeQuote.items):0,[activeQuote]);
-  const final = React.useMemo(()=>activeQuote?calcNegotiated(total,activeQuote.discountPercent,activeQuote.negotiatedPrice):0,[activeQuote,total]);
-  const ref = React.useRef();
+  const {activeQuote,setActiveQuote,newQuote} = React.useContext(AppContext);
+  const previewRef = React.useRef();
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-4">
-      {!activeQuote && (
-        Object.entries(COMPANY_DATA).map(([k,c])=>(
-          <button key={k} className="px-4 py-2 bg-blue-600 text-white mr-2"
-            onClick={()=>newQuote(k)}>
-            新增 {c.name}
+    <div className="flex min-h-screen">
+      <div className="w-48 bg-white p-4 border-r">
+        {Object.entries(COMPANY_DATA).map(([k,c])=>(
+          <button key={k}
+            className={`w-full mb-2 p-2 ${activeQuote?.companyKey===k?"bg-blue-600 text-white":"bg-gray-200"}`}
+            onClick={()=>{
+              if(!activeQuote) newQuote(k);
+              else setActiveQuote({...activeQuote,companyKey:k,no:generateQuoteNo(k)});
+            }}>
+            {c.name}
           </button>
-        ))
-      )}
+        ))}
+      </div>
 
-      {activeQuote && (
-        <>
-          {activeQuote.items.map((it,idx)=>(
-            <QuoteItem key={idx} item={it}
-              onChange={v=>{
-                const items=[...activeQuote.items];
-                items[idx]=v;
-                setActiveQuote({...activeQuote,items});
-              }}/>
-          ))}
-          <button className="bg-green-600 text-white px-3 py-1"
-            onClick={()=>setActiveQuote({...activeQuote,items:[...activeQuote.items,{}]})}>
-            + 新增項目
-          </button>
+      <div className="flex-grow p-6">
+        {activeQuote && (
+          <>
+            {activeQuote.items.map((it,idx)=>(
+              <QuoteItem key={idx} item={it}
+                onChange={v=>{
+                  const items=[...activeQuote.items];
+                  items[idx]=v;
+                  setActiveQuote({...activeQuote,items});
+                }}/>
+            ))}
+            <button className="bg-green-600 text-white px-3 py-1 mt-2"
+              onClick={()=>setActiveQuote({...activeQuote,items:[...activeQuote.items,{}]})}>
+              + 新增項目
+            </button>
 
-          <div className="flex gap-2 mt-4">
-            <button onClick={()=>window.print()} className="bg-gray-700 text-white px-3 py-1">列印</button>
-            <button onClick={()=>html2pdf().from(ref.current).save()} className="bg-red-600 text-white px-3 py-1">PDF</button>
-          </div>
+            <div className="mt-8" ref={previewRef}>
+              <PrintLayout quote={activeQuote}/>
+            </div>
 
-          <div ref={ref} className="mt-4">
-            <PrintLayout quote={activeQuote} total={total} final={final}/>
-          </div>
-        </>
-      )}
+            <button className="mt-4 bg-red-600 text-white px-3 py-1"
+              onClick={()=>html2pdf().from(previewRef.current).save()}>
+              PDF
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
-/***********************************************************
- * P8 — ReactDOM.createRoot
- ***********************************************************/
 ReactDOM.createRoot(document.getElementById("root")).render(
   <AppProvider><App/></AppProvider>
 );
