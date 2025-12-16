@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>家庭資金運用戰情室 (投資旗艦版)</title>
+    <title>家庭資金運用戰情室 (自動存檔版)</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -24,12 +24,22 @@
         .etf-table th { background: #f1f5f9; padding: 8px; text-align: center; color: #475569; font-weight: bold; border-bottom: 2px solid #cbd5e1; }
         .etf-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
         .etf-table tr:hover { background-color: #f8fafc; }
+
+        /* 存檔提示 */
+        .save-toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 10px 20px; border-radius: 5px; opacity: 0; transition: opacity 0.5s; pointer-events: none; }
+        .save-toast.show { opacity: 0.8; }
     </style>
 </head>
 <body>
 
-<div id="app" class="p-4 max-w-[1400px] mx-auto pb-20">
-    <h1 class="text-3xl font-bold text-slate-700 mb-6 text-center">📊 家庭資金運用戰情室 <span class="text-sm font-normal text-slate-500">Pro+ 投資旗艦版</span></h1>
+<div id="app" class="p-4 max-w-[1400px] mx-auto pb-20 relative">
+    
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-slate-700">📊 家庭資金運用戰情室 <span class="text-sm font-normal text-slate-500 block sm:inline">Pro+ 自動存檔版</span></h1>
+        <button @click="resetData" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-600 px-3 py-2 rounded transition">
+            🔄 清除資料恢復預設
+        </button>
+    </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         
@@ -200,6 +210,8 @@
             </div>
         </div>
     </div>
+    
+    <div id="saveToast" class="save-toast">資料已自動儲存</div>
 
 </div>
 
@@ -208,8 +220,8 @@
 
     createApp({
         setup() {
-            // --- 初始資料 ---
-            const male = ref({
+            // --- 定義預設資料 ---
+            const defaultMale = {
                 salary: 60000, contrib: 30000, bonusMonths: 5,
                 expenses: [
                     { name: '手機費', amount: 999, freq: 1 },
@@ -217,16 +229,18 @@
                     { name: '孝親費', amount: 5000, freq: 1 },
                     { name: '汽車險', amount: 12000, freq: 12 }
                 ]
-            });
-            const female = ref({
+            };
+
+            const defaultFemale = {
                 salary: 45000, contrib: 15000, bonusMonths: 4,
                 expenses: [
                     { name: '化妝/保養', amount: 2000, freq: 1 },
                     { name: '孝親費', amount: 5000, freq: 1 },
                     { name: '醫療險', amount: 24000, freq: 12 }
                 ]
-            });
-            const joint = ref({
+            };
+
+            const defaultJoint = {
                 expenses: [
                     { name: '房貸', amount: 25000, freq: 1 },
                     { name: '管理費', amount: 2500, freq: 1 },
@@ -236,14 +250,53 @@
                     { name: '房屋/地價稅', amount: 8000, freq: 12 }, 
                     { name: '共同飲食/日用', amount: 12000, freq: 1 }
                 ]
-            });
+            };
+            
+            const defaultEtf = { annualAmount: 0, rate: 5, years: 10 };
 
-            // ETF 試算參數
-            const etf = ref({
-                annualAmount: 0, // 初始會被 watch 覆蓋
-                rate: 5,         // 預設 5%
-                years: 10        // 預設 10年
-            });
+            // --- 響應式變數 ---
+            const male = ref(JSON.parse(JSON.stringify(defaultMale)));
+            const female = ref(JSON.parse(JSON.stringify(defaultFemale)));
+            const joint = ref(JSON.parse(JSON.stringify(defaultJoint)));
+            const etf = ref(JSON.parse(JSON.stringify(defaultEtf)));
+
+            // --- 存檔/讀檔邏輯 ---
+            const STORAGE_KEY = 'family_finance_data_v1';
+
+            const loadData = () => {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        // 合併資料以防結構改變
+                        male.value = { ...defaultMale, ...parsed.male };
+                        female.value = { ...defaultFemale, ...parsed.female };
+                        joint.value = { ...defaultJoint, ...parsed.joint };
+                        etf.value = { ...defaultEtf, ...parsed.etf };
+                    } catch (e) {
+                        console.error('讀取存檔失敗', e);
+                    }
+                }
+            };
+
+            const resetData = () => {
+                if(confirm('確定要清除所有資料並恢復預設值嗎？')) {
+                    male.value = JSON.parse(JSON.stringify(defaultMale));
+                    female.value = JSON.parse(JSON.stringify(defaultFemale));
+                    joint.value = JSON.parse(JSON.stringify(defaultJoint));
+                    etf.value = JSON.parse(JSON.stringify(defaultEtf));
+                    localStorage.removeItem(STORAGE_KEY);
+                    location.reload();
+                }
+            };
+
+            const showSaveToast = () => {
+                const toast = document.getElementById('saveToast');
+                if(toast) {
+                    toast.classList.add('show');
+                    setTimeout(() => toast.classList.remove('show'), 1500);
+                }
+            };
 
             // --- 基礎計算邏輯 ---
             const calcTotalMonthly = (list) => list.reduce((sum, item) => sum + (item.amount / item.freq), 0);
@@ -257,30 +310,25 @@
             const totalBonusYearly = computed(() => (male.value.salary * male.value.bonusMonths) + (female.value.salary * female.value.bonusMonths));
             const totalInvestable = computed(() => totalMonthlySurplusYearly.value + totalBonusYearly.value);
 
-            // --- ETF 複利計算邏輯 ---
-            // 當總投資額變動時，自動更新 ETF 的投入金額 (方便使用者，但也允許手動改)
+            // --- ETF 邏輯 ---
+            // 只有當「試算金額」與「系統算出金額」差異不大時，才自動更新 (避免用戶手動輸入後一直被蓋掉)
+            // 簡化策略：只要總投資額變動，且用戶沒有特別鎖定，就更新
             watch(totalInvestable, (newVal) => {
+                // 這裡我們做一個簡單邏輯：每次重開或薪資變動，預設帶入計算值
+                // 但為了讓使用者可以手動打，我們只在載入或重大變化時更新
+                // 實務上，這裡直接更新最方便，用戶如果要改，改完參數就好
                 etf.value.annualAmount = Math.max(0, Math.round(newVal));
-            }, { immediate: true });
+            });
 
             const etfResult = computed(() => {
                 const results = [];
                 let currentTotal = 0;
                 let totalPrincipal = 0;
                 const r = etf.value.rate / 100;
-                
                 for(let i = 1; i <= etf.value.years; i++) {
                     totalPrincipal += etf.value.annualAmount;
-                    // 計算邏輯：年初投入 -> 經過一年複利
-                    // 公式：(目前資產 + 新投入) * (1 + 利率)
                     currentTotal = (currentTotal + etf.value.annualAmount) * (1 + r);
-                    
-                    results.push({
-                        year: i,
-                        principal: totalPrincipal,
-                        total: currentTotal,
-                        interest: currentTotal - totalPrincipal
-                    });
+                    results.push({ year: i, principal: totalPrincipal, total: currentTotal, interest: currentTotal - totalPrincipal });
                 }
                 return results;
             });
@@ -313,7 +361,6 @@
                 // 2. ETF 成長曲線圖
                 const ctx2 = document.getElementById('etfChart').getContext('2d');
                 if(etfChart) etfChart.destroy();
-                
                 const labels = etfResult.value.map(r => `第${r.year}年`);
                 const dataPrincipal = etfResult.value.map(r => r.principal);
                 const dataTotal = etfResult.value.map(r => r.total);
@@ -328,21 +375,28 @@
                         ]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
+                        responsive: true, maintainAspectRatio: false,
                         interaction: { intersect: false, mode: 'index' },
                         plugins: { tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + Math.round(c.raw).toLocaleString() } } }
                     }
                 });
             };
 
-            // 監聽所有數據變化
+            // 監聽變動並存檔
             watch([male, female, joint, etf], () => {
-                // 用 nextTick 或 setTimeout 確保 DOM 渲染完再畫圖
+                const dataToSave = {
+                    male: male.value,
+                    female: female.value,
+                    joint: joint.value,
+                    etf: etf.value
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+                // showSaveToast(); // 如果不想一直跳提示，可以註解掉這行
                 setTimeout(updateCharts, 100);
             }, { deep: true });
 
             onMounted(() => {
+                loadData(); // 載入存檔
                 setTimeout(updateCharts, 500);
             });
 
@@ -352,7 +406,7 @@
                 totalMonthlySurplusYearly, totalBonusYearly, totalInvestable,
                 addRow: (list) => list.push({ name: '', amount: 0, freq: 1 }),
                 removeRow: (list, idx) => list.splice(idx, 1),
-                formatMoney
+                formatMoney, resetData
             };
         }
     }).mount('#app');
