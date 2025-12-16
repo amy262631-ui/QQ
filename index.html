@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>家庭資金運用戰情室 (自動存檔版)</title>
+    <title>家庭資金運用戰情室 (精準獎金版)</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -35,7 +35,7 @@
 <div id="app" class="p-4 max-w-[1400px] mx-auto pb-20 relative">
     
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold text-slate-700">📊 家庭資金運用戰情室 <span class="text-sm font-normal text-slate-500 block sm:inline">Pro+ 自動存檔版</span></h1>
+        <h1 class="text-3xl font-bold text-slate-700">📊 家庭資金運用戰情室 <span class="text-sm font-normal text-slate-500 block sm:inline">精準獎金版</span></h1>
         <button @click="resetData" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-600 px-3 py-2 rounded transition">
             🔄 清除資料恢復預設
         </button>
@@ -62,12 +62,14 @@
                 </div>
             </div>
             <div class="divider-bonus">
-                <h3 class="font-bold text-blue-700 flex items-center gap-2">🧧 年度獎金</h3>
-                <div class="flex items-center gap-2 mt-2">
-                    <label class="text-sm text-gray-600">領取月數</label>
-                    <input type="number" v-model.number="male.bonusMonths" class="w-20 p-1 text-center font-bold text-blue-700">
+                <h3 class="font-bold text-blue-700 flex items-center gap-2">🧧 年度獎金總額</h3>
+                <div class="mt-2">
+                    <label class="text-xs text-gray-500 block mb-1">包含年終、三節、績效等所有額外收入</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-gray-400">$</span>
+                        <input type="number" v-model.number="male.bonusAmount" class="w-full p-2 pl-6 text-lg font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded">
+                    </div>
                 </div>
-                <div class="text-right mt-1"><span class="text-xs text-gray-500">年度額外收入:</span> <span class="text-xl font-bold text-blue-600">{{ formatMoney(male.salary * male.bonusMonths) }}</span></div>
             </div>
         </div>
 
@@ -90,12 +92,14 @@
                 </div>
             </div>
             <div class="divider-bonus">
-                <h3 class="font-bold text-pink-700 flex items-center gap-2">🧧 年度獎金</h3>
-                <div class="flex items-center gap-2 mt-2">
-                    <label class="text-sm text-gray-600">領取月數</label>
-                    <input type="number" v-model.number="female.bonusMonths" class="w-20 p-1 text-center font-bold text-pink-700">
+                <h3 class="font-bold text-pink-700 flex items-center gap-2">🧧 年度獎金總額</h3>
+                <div class="mt-2">
+                    <label class="text-xs text-gray-500 block mb-1">包含年終、三節、績效等所有額外收入</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-gray-400">$</span>
+                        <input type="number" v-model.number="female.bonusAmount" class="w-full p-2 pl-6 text-lg font-bold text-pink-700 bg-pink-50 border border-pink-200 rounded">
+                    </div>
                 </div>
-                <div class="text-right mt-1"><span class="text-xs text-gray-500">年度額外收入:</span> <span class="text-xl font-bold text-pink-600">{{ formatMoney(female.salary * female.bonusMonths) }}</span></div>
             </div>
         </div>
 
@@ -136,7 +140,11 @@
                     </div>
                 </div>
                 <div class="border-b border-slate-600 pb-4">
-                    <div class="flex justify-between items-end mb-2"><span class="text-lg">2. 年度獎金總額 (年)</span><span class="font-mono text-xl text-purple-300">{{ formatMoney(totalBonusYearly) }}</span></div>
+                    <div class="flex justify-between items-end mb-2"><span class="text-lg">2. 年度獎金總額 (輸入值)</span><span class="font-mono text-xl text-purple-300">{{ formatMoney(totalBonusYearly) }}</span></div>
+                    <div class="pl-4 text-xs text-gray-400 space-y-1">
+                         <div class="flex justify-between"><span>• 男方年度獎金</span><span>{{ formatMoney(male.bonusAmount) }}</span></div>
+                         <div class="flex justify-between"><span>• 女方年度獎金</span><span>{{ formatMoney(female.bonusAmount) }}</span></div>
+                    </div>
                 </div>
                 <div class="flex justify-between items-center pt-2">
                     <div><span class="text-xl font-bold block">🚀 年度總投資火力</span><span class="text-xs text-gray-400">(系統自動帶入下方試算)</span></div>
@@ -221,8 +229,10 @@
     createApp({
         setup() {
             // --- 定義預設資料 ---
+            // 注意：這裡改為 bonusAmount 直接記錄金額
             const defaultMale = {
-                salary: 60000, contrib: 30000, bonusMonths: 5,
+                salary: 60000, contrib: 30000, 
+                bonusAmount: 300000, // 預設 5 個月 x 6萬 = 30萬
                 expenses: [
                     { name: '手機費', amount: 999, freq: 1 },
                     { name: '加油/交通', amount: 3000, freq: 1 },
@@ -232,7 +242,8 @@
             };
 
             const defaultFemale = {
-                salary: 45000, contrib: 15000, bonusMonths: 4,
+                salary: 45000, contrib: 15000, 
+                bonusAmount: 180000, // 預設 4 個月 x 4.5萬 = 18萬
                 expenses: [
                     { name: '化妝/保養', amount: 2000, freq: 1 },
                     { name: '孝親費', amount: 5000, freq: 1 },
@@ -261,14 +272,14 @@
             const etf = ref(JSON.parse(JSON.stringify(defaultEtf)));
 
             // --- 存檔/讀檔邏輯 ---
-            const STORAGE_KEY = 'family_finance_data_v1';
+            // 升級存檔 Key，避免與舊版資料結構衝突
+            const STORAGE_KEY = 'family_finance_data_v2';
 
             const loadData = () => {
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (saved) {
                     try {
                         const parsed = JSON.parse(saved);
-                        // 合併資料以防結構改變
                         male.value = { ...defaultMale, ...parsed.male };
                         female.value = { ...defaultFemale, ...parsed.female };
                         joint.value = { ...defaultJoint, ...parsed.joint };
@@ -307,16 +318,14 @@
             const fMonthlyLeft = computed(() => female.value.salary - female.value.contrib - calcTotalMonthly(female.value.expenses));
             
             const totalMonthlySurplusYearly = computed(() => (mMonthlyLeft.value + fMonthlyLeft.value + jointSurplus.value) * 12);
-            const totalBonusYearly = computed(() => (male.value.salary * male.value.bonusMonths) + (female.value.salary * female.value.bonusMonths));
+            
+            // 直接使用輸入的獎金金額
+            const totalBonusYearly = computed(() => male.value.bonusAmount + female.value.bonusAmount);
+            
             const totalInvestable = computed(() => totalMonthlySurplusYearly.value + totalBonusYearly.value);
 
             // --- ETF 邏輯 ---
-            // 只有當「試算金額」與「系統算出金額」差異不大時，才自動更新 (避免用戶手動輸入後一直被蓋掉)
-            // 簡化策略：只要總投資額變動，且用戶沒有特別鎖定，就更新
             watch(totalInvestable, (newVal) => {
-                // 這裡我們做一個簡單邏輯：每次重開或薪資變動，預設帶入計算值
-                // 但為了讓使用者可以手動打，我們只在載入或重大變化時更新
-                // 實務上，這裡直接更新最方便，用戶如果要改，改完參數就好
                 etf.value.annualAmount = Math.max(0, Math.round(newVal));
             });
 
@@ -391,12 +400,11 @@
                     etf: etf.value
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-                // showSaveToast(); // 如果不想一直跳提示，可以註解掉這行
                 setTimeout(updateCharts, 100);
             }, { deep: true });
 
             onMounted(() => {
-                loadData(); // 載入存檔
+                loadData(); 
                 setTimeout(updateCharts, 500);
             });
 
