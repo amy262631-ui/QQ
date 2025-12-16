@@ -3,197 +3,321 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>家庭資金運用戰情室</title>
+    <title>家庭資金運用戰情室 (Pro版)</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; display: flex; gap: 20px; flex-wrap: wrap; }
-        
-        /* 左側輸入區 */
-        .input-section { flex: 1; min-width: 300px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-        h3 { color: #34495e; margin-top: 20px; font-size: 1.1em; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
-        input[type="number"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 12px; background-color: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 20px; transition: background 0.3s; }
-        .btn:hover { background-color: #2980b9; }
-
-        /* 右側圖表區 */
-        .chart-section { flex: 1.5; min-width: 400px; display: flex; flex-direction: column; gap: 20px; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .result-box { background: #e8f6f3; padding: 15px; border-radius: 5px; margin-top: 10px; border-left: 5px solid #1abc9c; }
-        .alert-box { background: #fdedec; padding: 15px; border-radius: 5px; margin-top: 10px; border-left: 5px solid #e74c3c; display: none; }
-        
-        /* Canvas 大小控制 */
-        .canvas-container { position: relative; height: 300px; width: 100%; }
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #f3f4f6; }
+        .card { background: white; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); padding: 1.5rem; height: 100%; }
+        .input-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+        .btn-add { background-color: #ecfdf5; color: #059669; border: 1px dashed #059669; width: 100%; padding: 0.5rem; border-radius: 0.375rem; transition: 0.2s; }
+        .btn-add:hover { background-color: #d1fae5; }
+        .btn-del { color: #ef4444; cursor: pointer; padding: 0 5px; }
+        .money-text { font-family: 'Courier New', Courier, monospace; font-weight: bold; }
+        .section-header { border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+        input, select { border: 1px solid #d1d5db; padding: 0.4rem; border-radius: 0.25rem; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="input-section">
-        <h2>📊 參數設定</h2>
+<div id="app" class="p-4 max-w-[1400px] mx-auto">
+    <h1 class="text-3xl font-bold text-slate-700 mb-6 text-center">📊 家庭資金運用戰情室 <span class="text-sm font-normal text-slate-500">Pro 詳細版</span></h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         
-        <h3>👤 收入設定 (月薪)</h3>
-        <div class="form-group"><label>男生月薪</label><input type="number" id="salaryMale" value="60000"></div>
-        <div class="form-group"><label>女生月薪</label><input type="number" id="salaryFemale" value="45000"></div>
-
-        <h3>🏦 共同帳戶投入 (每月)</h3>
-        <div class="form-group"><label>男生投入金額</label><input type="number" id="contribMale" value="30000"></div>
-        <div class="form-group"><label>女生投入金額</label><input type="number" id="contribFemale" value="15000"></div>
-
-        <h3>🏠 共同支出 (每月)</h3>
-        <div class="form-group"><label>房貸</label><input type="number" id="expMortgage" value="25000"></div>
-        <div class="form-group"><label>生活雜支 (水電/餐費/網路)</label><input type="number" id="expLiving" value="15000"></div>
-
-        <h3>🧧 獎金設定</h3>
-        <div class="form-group">
-            <label>年度領取獎金總月數 (含三節+年終)</label>
-            <input type="number" id="bonusMonths" value="5" title="例如：5/1+端午+中秋=3個月，年終2個月，共5個月">
-        </div>
-
-        <button class="btn" onclick="calculate()">更新試算結果</button>
-    </div>
-
-    <div class="chart-section">
-        
-        <div class="card">
-            <h2>📝 財務健檢結論</h2>
-            <div id="alertBox" class="alert-box">⚠️ 警告：共同帳戶每月透支，請增加投入金額或減少開銷！</div>
-            <div class="result-box">
-                <p><strong>共同帳戶餘額：</strong> <span id="valJointBalance">0</span> 元/月</p>
-                <p><strong>兩人私房錢總剩餘：</strong> <span id="valPersonalLeft">0</span> 元/月 (已扣除公費)</p>
+        <div class="card border-t-4 border-blue-500">
+            <div class="section-header">
+                <h2 class="text-xl font-bold text-blue-700">👨 男生財務</h2>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-600">月薪資</label>
+                    <input type="number" v-model.number="male.salary" class="w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-600">撥入共同帳戶</label>
+                    <input type="number" v-model.number="male.contrib" class="w-full bg-blue-50">
+                </div>
+                
                 <hr>
-                <p style="color: #2c3e50; font-size: 1.2em;"><strong>💰 年度可投資 ETF 總額： <span id="valTotalInvest" style="color: #d35400;">0</span> 元</strong></p>
-                <small>(包含每月結餘 + 全數年度獎金)</small>
+                <h3 class="font-bold text-gray-600">個人開銷細項 (扣除公費後)</h3>
+                <div v-for="(item, index) in male.expenses" :key="index" class="input-row">
+                    <input type="text" v-model="item.name" placeholder="項目" class="w-1/3">
+                    <input type="number" v-model.number="item.amount" placeholder="金額" class="w-1/3">
+                    <select v-model="item.freq" class="w-1/4 text-xs">
+                        <option :value="1">每月</option>
+                        <option :value="2">每2月</option>
+                        <option :value="12">每年</option>
+                    </select>
+                    <span class="btn-del" @click="removeRow(male.expenses, index)">✕</span>
+                </div>
+                <button class="btn-add" @click="addRow(male.expenses)">+ 新增個人開銷</button>
+            </div>
+            <div class="mt-4 p-3 bg-blue-100 rounded text-right">
+                <div class="text-xs text-blue-600">月均個人總支出</div>
+                <div class="text-xl font-bold text-blue-800">{{ formatMoney(calcTotalMonthly(male.expenses)) }}</div>
             </div>
         </div>
 
-        <div class="card">
-            <h3>共同帳戶資金分配 (月度)</h3>
-            <div class="canvas-container">
-                <canvas id="jointChart"></canvas>
+        <div class="card border-t-4 border-pink-500">
+            <div class="section-header">
+                <h2 class="text-xl font-bold text-pink-700">👩 女生財務</h2>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-600">月薪資</label>
+                    <input type="number" v-model.number="female.salary" class="w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-600">撥入共同帳戶</label>
+                    <input type="number" v-model.number="female.contrib" class="w-full bg-pink-50">
+                </div>
+                
+                <hr>
+                <h3 class="font-bold text-gray-600">個人開銷細項 (扣除公費後)</h3>
+                <div v-for="(item, index) in female.expenses" :key="index" class="input-row">
+                    <input type="text" v-model="item.name" placeholder="項目" class="w-1/3">
+                    <input type="number" v-model.number="item.amount" placeholder="金額" class="w-1/3">
+                    <select v-model="item.freq" class="w-1/4 text-xs">
+                        <option :value="1">每月</option>
+                        <option :value="2">每2月</option>
+                        <option :value="12">每年</option>
+                    </select>
+                    <span class="btn-del" @click="removeRow(female.expenses, index)">✕</span>
+                </div>
+                <button class="btn-add" @click="addRow(female.expenses)">+ 新增個人開銷</button>
+            </div>
+            <div class="mt-4 p-3 bg-pink-100 rounded text-right">
+                <div class="text-xs text-pink-600">月均個人總支出</div>
+                <div class="text-xl font-bold text-pink-800">{{ formatMoney(calcTotalMonthly(female.expenses)) }}</div>
             </div>
         </div>
 
-        <div class="card">
-            <h3>年度財富來源分析 (獎金 vs 月存)</h3>
-            <div class="canvas-container">
-                <canvas id="yearChart"></canvas>
+        <div class="card border-t-4 border-green-500">
+            <div class="section-header">
+                <h2 class="text-xl font-bold text-green-700">🏠 共同帳戶 & 開銷</h2>
+                <div class="text-sm text-green-600 bg-green-100 px-2 py-1 rounded">
+                    月收入: {{ formatMoney(male.contrib + female.contrib) }}
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <h3 class="font-bold text-gray-600">共同支出細項</h3>
+                <div class="text-xs text-gray-400 mb-2">可設定頻率，例如：水電選「每2月」，房屋稅選「每年」</div>
+                
+                <div v-for="(item, index) in joint.expenses" :key="index" class="input-row">
+                    <input type="text" v-model="item.name" placeholder="項目" class="w-1/3">
+                    <input type="number" v-model.number="item.amount" placeholder="金額" class="w-1/3">
+                    <select v-model="item.freq" class="w-1/4 text-xs">
+                        <option :value="1">每月</option>
+                        <option :value="2">每2月</option>
+                        <option :value="12">每年</option>
+                    </select>
+                    <span class="btn-del" @click="removeRow(joint.expenses, index)">✕</span>
+                </div>
+                <button class="btn-add" @click="addRow(joint.expenses)">+ 新增共同開銷</button>
+            </div>
+            
+            <div class="mt-4 p-3 bg-green-100 rounded">
+                <div class="flex justify-between items-end">
+                    <div class="text-sm">
+                        <div class="text-gray-600">月均總支出</div>
+                        <div class="text-gray-600">每月盈餘</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-bold text-red-600">- {{ formatMoney(calcTotalMonthly(joint.expenses)) }}</div>
+                        <div :class="jointSurplus >= 0 ? 'text-green-700' : 'text-red-600'" class="text-2xl font-bold">
+                            {{ formatMoney(jointSurplus) }}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <div class="card bg-slate-800 text-white">
+            <h2 class="text-2xl font-bold text-yellow-400 mb-4">💰 年度投資潛力分析</h2>
+            
+            <div class="mb-6">
+                <label class="block text-sm text-gray-300 mb-1">年度獎金設定 (月薪倍數)</label>
+                <div class="flex items-center gap-2">
+                    <input type="number" v-model.number="bonusMonths" class="text-black w-20 p-1">
+                    <span class="text-sm text-gray-400">個月 (三節+年終)</span>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="flex justify-between border-b border-slate-600 pb-2">
+                    <span>1. 每月結餘累積 (12個月)</span>
+                    <span class="font-mono text-yellow-200">{{ formatMoney(totalMonthlySurplusYearly) }}</span>
+                </div>
+                <div class="pl-4 text-xs text-gray-400 space-y-1">
+                    <div class="flex justify-between"><span>• 男方個人每月剩餘</span> <span>{{ formatMoney(male.salary - male.contrib - calcTotalMonthly(male.expenses)) }} /月</span></div>
+                    <div class="flex justify-between"><span>• 女方個人每月剩餘</span> <span>{{ formatMoney(female.salary - female.contrib - calcTotalMonthly(female.expenses)) }} /月</span></div>
+                    <div class="flex justify-between"><span>• 共同帳戶每月盈餘</span> <span>{{ formatMoney(jointSurplus) }} /月</span></div>
+                </div>
+
+                <div class="flex justify-between border-b border-slate-600 pb-2">
+                    <span>2. 年度獎金總額 (隱藏財富)</span>
+                    <span class="font-mono text-purple-300">{{ formatMoney(totalBonusYearly) }}</span>
+                </div>
+                
+                <div class="flex justify-between items-center pt-2">
+                    <span class="text-lg font-bold">🚀 年度可投入投資總額</span>
+                    <span class="text-3xl font-bold text-green-400">{{ formatMoney(totalInvestable) }}</span>
+                </div>
+            </div>
+
+            <div v-if="jointSurplus < 0" class="mt-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-200 text-sm">
+                ⚠️ <strong>警告：</strong> 共同帳戶目前每月透支 {{ formatMoney(Math.abs(jointSurplus)) }} 元！<br>
+                建議優先從個人盈餘填補，或減少共同開銷，否則會侵蝕投資本金。
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="font-bold text-gray-700 mb-4">資金流向分佈</h3>
+            <div class="h-64">
+                <canvas id="financeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
-    // 初始化全域變數來存儲圖表實例
-    let jointChartInstance = null;
-    let yearChartInstance = null;
+    const { createApp, ref, computed, watch, onMounted } = Vue;
 
-    function calculate() {
-        // 1. 獲取輸入值
-        const salaryMale = Number(document.getElementById('salaryMale').value);
-        const salaryFemale = Number(document.getElementById('salaryFemale').value);
-        const contribMale = Number(document.getElementById('contribMale').value);
-        const contribFemale = Number(document.getElementById('contribFemale').value);
-        
-        const expMortgage = Number(document.getElementById('expMortgage').value);
-        const expLiving = Number(document.getElementById('expLiving').value);
-        const bonusMonths = Number(document.getElementById('bonusMonths').value);
-
-        // 2. 邏輯計算
-        // 共同帳戶
-        const jointIncome = contribMale + contribFemale;
-        const jointExpenseTotal = expMortgage + expLiving;
-        const jointBalance = jointIncome - jointExpenseTotal;
-
-        // 個人剩餘 (這裡簡化計算，假設個人剩餘 = 薪水 - 公費，你可以自行腦補扣除個人花費)
-        const leftMale = salaryMale - contribMale;
-        const leftFemale = salaryFemale - contribFemale;
-        const totalPersonalLeftMonthly = leftMale + leftFemale;
-
-        // 年度獎金 (隱藏財富)
-        const yearlyBonus = (salaryMale + salaryFemale) * bonusMonths;
-
-        // 年度總投資潛力 (每月盈餘 x 12 + 年度獎金)
-        // 注意：如果共同帳戶透支，要先填補坑洞
-        let monthlyTotalSurplus = totalPersonalLeftMonthly + jointBalance;
-        const totalInvestable = (monthlyTotalSurplus * 12) + yearlyBonus;
-
-        // 3. 更新文字介面
-        document.getElementById('valJointBalance').innerText = jointBalance.toLocaleString();
-        document.getElementById('valPersonalLeft').innerText = totalPersonalLeftMonthly.toLocaleString();
-        document.getElementById('valTotalInvest').innerText = totalInvestable.toLocaleString();
-
-        const alertBox = document.getElementById('alertBox');
-        if (jointBalance < 0) {
-            alertBox.style.display = 'block';
-            alertBox.innerText = `⚠️ 警告：共同帳戶每月透支 ${Math.abs(jointBalance)} 元！`;
-        } else {
-            alertBox.style.display = 'none';
-        }
-
-        // 4. 繪製 Canvas 圖表
-        drawJointChart(expMortgage, expLiving, jointBalance);
-        drawYearChart((totalPersonalLeftMonthly * 12), yearlyBonus, (jointBalance * 12));
-    }
-
-    // 繪製圓餅圖 (共同帳戶)
-    function drawJointChart(mortgage, living, balance) {
-        const ctx = document.getElementById('jointChart').getContext('2d');
-        
-        // 如果有舊圖表，先銷毀
-        if (jointChartInstance) jointChartInstance.destroy();
-
-        // 處理盈餘顯示 (如果透支，盈餘為0，避免圖表錯誤)
-        const displayBalance = balance > 0 ? balance : 0;
-
-        jointChartInstance = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['房貸', '生活雜支', '共同帳戶盈餘'],
-                datasets: [{
-                    data: [mortgage, living, displayBalance],
-                    backgroundColor: ['#e74c3c', '#f39c12', '#2ecc71'],
-                    borderWidth: 1
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-    }
-
-    // 繪製長條圖 (年度分析)
-    function drawYearChart(personalYearly, bonusYearly, jointYearly) {
-        const ctx = document.getElementById('yearChart').getContext('2d');
-        
-        if (yearChartInstance) yearChartInstance.destroy();
-
-        // 處理共同帳戶透支的情況
-        const displayJoint = jointYearly > 0 ? jointYearly : 0;
-        const deficit = jointYearly < 0 ? jointYearly : 0;
-
-        yearChartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['資金來源'],
-                datasets: [
-                    { label: '平常月薪結餘 (個人)', data: [personalYearly], backgroundColor: '#3498db' },
-                    { label: '平常月薪結餘 (公費)', data: [displayJoint], backgroundColor: '#2ecc71' },
-                    { label: '年度獎金 (隱藏財富)', data: [bonusYearly], backgroundColor: '#9b59b6' },
-                    { label: '透支缺口', data: [deficit], backgroundColor: '#e74c3c' }
+    createApp({
+        setup() {
+            // --- 初始資料 (預設範例) ---
+            const bonusMonths = ref(5);
+            
+            const male = ref({
+                salary: 60000,
+                contrib: 30000,
+                expenses: [
+                    { name: '手機費', amount: 999, freq: 1 },
+                    { name: '加油/交通', amount: 3000, freq: 1 },
+                    { name: '孝親費', amount: 5000, freq: 1 },
+                    { name: '汽車險', amount: 12000, freq: 12 }, // 年繳
                 ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { x: { stacked: true }, y: { stacked: true } }
-            }
-        });
-    }
+            });
 
-    // 頁面載入時先算一次
-    window.onload = calculate;
+            const female = ref({
+                salary: 45000,
+                contrib: 15000,
+                expenses: [
+                    { name: '化妝/保養', amount: 2000, freq: 1 },
+                    { name: '孝親費', amount: 5000, freq: 1 },
+                    { name: '醫療險', amount: 24000, freq: 12 }, // 年繳
+                ]
+            });
+
+            const joint = ref({
+                expenses: [
+                    { name: '房貸', amount: 25000, freq: 1 },
+                    { name: '管理費', amount: 2500, freq: 1 },
+                    { name: '網路費', amount: 800, freq: 1 },
+                    { name: '電費', amount: 3000, freq: 2 },  // 每兩月
+                    { name: '水費', amount: 500, freq: 2 },   // 每兩月
+                    { name: '房屋/地價稅', amount: 8000, freq: 12 }, // 每年
+                    { name: '共同飲食/日用', amount: 12000, freq: 1 },
+                ]
+            });
+
+            // --- 計算邏輯 ---
+            // 計算列表的月均總合: 金額 / 頻率
+            const calcTotalMonthly = (list) => {
+                return list.reduce((sum, item) => sum + (item.amount / item.freq), 0);
+            };
+
+            const jointSurplus = computed(() => {
+                const income = male.value.contrib + female.value.contrib;
+                const expense = calcTotalMonthly(joint.value.expenses);
+                return income - expense;
+            });
+
+            const totalMonthlySurplusYearly = computed(() => {
+                const mSurplus = male.value.salary - male.value.contrib - calcTotalMonthly(male.value.expenses);
+                const fSurplus = female.value.salary - female.value.contrib - calcTotalMonthly(female.value.expenses);
+                const jSurplus = jointSurplus.value;
+                return (mSurplus + fSurplus + jSurplus) * 12;
+            });
+
+            const totalBonusYearly = computed(() => {
+                return (male.value.salary + female.value.salary) * bonusMonths.value;
+            });
+
+            const totalInvestable = computed(() => {
+                return totalMonthlySurplusYearly.value + totalBonusYearly.value;
+            });
+
+            // --- 功能函數 ---
+            const addRow = (list) => {
+                list.push({ name: '', amount: 0, freq: 1 });
+            };
+            const removeRow = (list, index) => {
+                list.splice(index, 1);
+            };
+            const formatMoney = (val) => {
+                return Math.round(val).toLocaleString();
+            };
+
+            // --- 圖表繪製 ---
+            let chartInstance = null;
+            const updateChart = () => {
+                const ctx = document.getElementById('financeChart').getContext('2d');
+                if(chartInstance) chartInstance.destroy();
+
+                const mExp = calcTotalMonthly(male.value.expenses);
+                const fExp = calcTotalMonthly(female.value.expenses);
+                const jExp = calcTotalMonthly(joint.value.expenses);
+                
+                // 計算真正的「淨儲蓄」(含獎金平均到每月)
+                const monthlyBonusAvg = totalBonusYearly.value / 12;
+                const totalIncomeMonthly = male.value.salary + female.value.salary + monthlyBonusAvg;
+                const investPotential = totalInvestable.value / 12;
+
+                chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['資金分配 (月均)'],
+                        datasets: [
+                            { label: '共同支出', data: [jExp], backgroundColor: '#10b981' }, // Green
+                            { label: '男生個人開銷', data: [mExp], backgroundColor: '#3b82f6' }, // Blue
+                            { label: '女生個人開銷', data: [fExp], backgroundColor: '#ec4899' }, // Pink
+                            { label: '可投資/儲蓄 (含獎金)', data: [investPotential], backgroundColor: '#f59e0b' } // Yellow
+                        ]
+                    },
+                    options: {
+                        indexAxis: 'y', // 橫向長條圖
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { x: { stacked: true }, y: { stacked: true } }
+                    }
+                });
+            };
+
+            // 監聽數據變化自動更新圖表
+            watch([male, female, joint, bonusMonths], () => {
+                updateChart();
+            }, { deep: true });
+
+            onMounted(() => {
+                updateChart();
+            });
+
+            return {
+                male, female, joint, bonusMonths,
+                calcTotalMonthly, jointSurplus,
+                totalMonthlySurplusYearly, totalBonusYearly, totalInvestable,
+                addRow, removeRow, formatMoney
+            };
+        }
+    }).mount('#app');
 </script>
 
 </body>
